@@ -91,7 +91,11 @@ public class CucumberPosSteps {
         assertThat(retrievedPosList).isEmpty();
     }
 
-    // TODO: Add Given step for new scenario
+    @Given("a POS list with the following elements")
+    public void aPosWithTheFollowingElements(List<PosDto> posList) {
+        createdPosList = createPos(posList);
+        assertThat(createdPosList).size().isEqualTo(posList.size());
+    }
 
     // When -----------------------------------------------------------------------
 
@@ -101,7 +105,43 @@ public class CucumberPosSteps {
         assertThat(createdPosList).size().isEqualTo(posList.size());
     }
 
-    // TODO: Add When step for new scenario
+    @When("I update the POS {string} with the following elements")
+    public void iFilterPosByName(String name, List<PosDto> updatedList) {
+
+        PosDto existing = RestAssured
+                .given()
+                .get("/api/pos/filter?name=" + name)
+                .then()
+                .statusCode(200)
+                .extract()
+                .as(PosDto.class);
+
+        PosDto temp = updatedList.getFirst();
+
+        PosDto updateRequest = PosDto.builder()
+                .id(existing.id())
+                .name(temp.name())
+                .description(temp.description())
+                .type(temp.type())
+                .campus(temp.campus())
+                .street(temp.street())
+                .houseNumber(temp.houseNumber())
+                .postalCode(temp.postalCode())
+                .city(temp.city())
+                .build();
+
+
+        updatedPos = RestAssured
+                .given()
+                .contentType("application/json")
+                .body(updateRequest)
+                .when()
+                .put("/api/pos/" + existing.id())
+                .then()
+                .statusCode(200)
+                .extract()
+                .as(PosDto.class);
+    }
 
     // Then -----------------------------------------------------------------------
 
@@ -113,5 +153,13 @@ public class CucumberPosSteps {
                 .containsExactlyInAnyOrderElementsOf(createdPosList);
     }
 
-    // TODO: Add Then step for new scenario
+    @Then("the POS list should contain the following elements in the same order")
+    public void theReturnedPosShouldMatchTheFollowingValues(List<PosDto> expectedList){
+        List<PosDto> retrievedPosList = retrievePos();
+        assertThat(retrievedPosList)
+                .usingRecursiveComparison()
+                .ignoringFields("id", "createdAt", "updatedAt")
+                .ignoringCollectionOrder()
+                .isEqualTo(expectedList);
+    }
 }
